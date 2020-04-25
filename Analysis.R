@@ -6,8 +6,8 @@ geno <- read.table("genotypes.INDrow.geno", sep = "\t", header = TRUE)
 map <- read.table("map.txt", sep = "\t", header = TRUE, row.names = 2)
 
 ## Which animals are female/ male
-f <- as.character(pheno[which(pheno[,"sex"] == 0), 1])
-m <- as.character(pheno[which(pheno[,"sex"] == 1), 1])
+f <- rownames(pheno)[which(pheno[,"sex"] == 0)]
+m <- rownames(pheno)[which(pheno[,"sex"] == 1)]
 
 ## E.G. Genotypes of first 10 females or males on X
 geno[f[1:10], which(map[,1] == "X")]
@@ -59,6 +59,9 @@ genotypes <- read.table("genotypes.INDrow.code", sep = "\t", header = TRUE,na.st
 
 library(lme4)
 
+pheno[, "Batch_Plate"] <- as.character(pheno[, "Batch_Plate"])
+pheno[which(is.na(pheno[, "Batch_Plate"])), "Batch_Plate"] <- "Sequenom"
+
 # Figure out the best covariates for each phenotype
 lmdata <- data.frame(
             "BW6" = pheno[, "Body_Weight_6m"],
@@ -67,18 +70,29 @@ lmdata <- data.frame(
             "BW24" = pheno[, "Body_Weight_24m"],
             "Longevity" = pheno[, "Longevity"],
             "Center" = as.factor(pheno[, "Center"]),
+            "Sex" = as.factor(pheno[, "sex"]),
             "Cohort_Year" = as.factor(pheno[, "Cohort_Year"]),
             "Birth_Month" = as.factor(substr(pheno[, "Birth_Date"], 6, 7)),
             "Drug_Treatment" = as.factor(pheno[, "Drug_Treatment"]),
             "Batch_Plate" = as.factor(pheno[, "Batch_Plate"])
 )
 
-anova(lm(BW6 ~ Center + Cohort_Year + Birth_Month  + Drug_Treatment + Batch_Plate, data = lmdata))
-anova(lm(BW12 ~ Center + Cohort_Year + Birth_Month  + Drug_Treatment + Batch_Plate, data = lmdata))
-anova(lm(BW18 ~ Center + Cohort_Year + Birth_Month  + Drug_Treatment + Batch_Plate, data = lmdata))
-anova(lm(BW24 ~ Center + Cohort_Year + Birth_Month  + Drug_Treatment + Batch_Plate, data = lmdata))
-anova(lm(Longevity ~ Center + Cohort_Year + Birth_Month  + Drug_Treatment + Batch_Plate, data = lmdata))
-anova(lm(Longevity ~ Batch_Plate + Cohort_Year + Drug_Treatment, data = lmdata))
+lmdata <- lmdata[-which(apply(lmdata[, 6:11],1, function(x){any(is.na(x))})),]
+
+anova(lm(BW6 ~ Sex + Center + Cohort_Year + Birth_Month  + Drug_Treatment + Batch_Plate, data = lmdata))
+anova(lm(BW12 ~ Sex + Center + Cohort_Year + Birth_Month  + Drug_Treatment + Batch_Plate, data = lmdata))
+anova(lm(BW18 ~ Sex + Center + Cohort_Year + Birth_Month  + Drug_Treatment + Batch_Plate, data = lmdata))
+anova(lm(BW24 ~ Sex + Center + Cohort_Year + Birth_Month  + Drug_Treatment + Batch_Plate, data = lmdata))
+anova(lm(Longevity ~ Sex + Center + Cohort_Year + Birth_Month  + Drug_Treatment + Batch_Plate, data = lmdata))
+anova(lm(Longevity ~ Sex + Center + Cohort_Year + Drug_Treatment + Batch_Plate + Sex:Center + Sex:Cohort_Year, data = lmdata))
+
+model1 <- lm(Longevity ~ Sex + Center + Cohort_Year + Batch_Plate + Sex:Center + Drug_Treatment, data = lmdata)
+anova(lm(Longevity ~ Sex + Batch_Plate + Cohort_Year + Drug_Treatment, data = lmdata))
+
+m1 <- lm(Longevity ~ Sex + Center + Cohort_Year + Birth_Month  + Drug_Treatment + Batch_Plate, data = lmdata)
+m2 <- lm(Longevity ~ Sex + Center + Batch_Plate + Cohort_Year + Drug_Treatment, data = lmdata)
+
+AIC(m1,m2)
 
 plot(Longevity ~ Batch_Plate, data = lmdata)
 
