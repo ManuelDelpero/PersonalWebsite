@@ -1,3 +1,8 @@
+#
+# ITP initial data analysis
+# (c) Danny Arends, HU-Berlin
+#
+
 setwd("/home/danny/Github/Maroun")
 
 # - Load in the formatted data
@@ -25,6 +30,7 @@ chrX <- geno[, map[,1] == "X"]
 chrXo <- chrX
 dim(chrX)
 
+# Convert the coding into genotypes
 autosomes[autosomes == 1] <- "AC"
 autosomes[autosomes == 2] <- "BC"
 autosomes[autosomes == 3] <- "AD"
@@ -34,6 +40,7 @@ autosomes[autosomes == 6] <- "B"
 autosomes[autosomes == 7] <- "C"
 autosomes[autosomes == 8] <- "D"
 
+sum(autosomes == "A")
 #table(unlist(apply(autosomes, 2, unlist)))
 
 chrX[chrX == 3] <- "-"
@@ -59,8 +66,33 @@ genotypes <- read.table("genotypes.INDrow.code", sep = "\t", header = TRUE,na.st
 
 library(lme4)
 
+toSeason <- function(months){
+  seasons <- c(rep("Winter", 2), rep("Spring",3), rep("Summer", 3), rep("Autumn", 3), rep("Winter", 1))
+  return(seasons[as.numeric(months)])
+}
+
 pheno[, "Batch_Plate"] <- as.character(pheno[, "Batch_Plate"])
 pheno[which(is.na(pheno[, "Batch_Plate"])), "Batch_Plate"] <- "Sequenom"
+pheno[, "Center"] <- as.character(pheno[, "Center"])
+
+pheno <- cbind(pheno, "Year" = as.factor(substr(pheno[, "Birth_Date"], 0, 4)))
+pheno <- cbind(pheno, "Month" = as.factor(substr(pheno[, "Birth_Date"], 6, 7)))
+pheno <- cbind(pheno, "Season" = as.factor(toSeason(substr(pheno[, "Birth_Date"], 6, 7))))
+
+phenotypes <- c("Body_Weight_6m","Body_Weight_12m", "Body_Weight_18m", "Body_Weight_24m", "Longevity")
+covariates <- c("sex", "Center", "Year", "Month", "Season", "Drug_Treatment", "Batch_Plate")
+treatments <- table(pheno[,"Drug_Treatment"])
+treatments <- c("Control", names(treatments[treatments > 150 & names(treatments) != "Control"]))
+centers <- names(table(pheno[,"Center"]))
+
+# Fixes due to boxplots: Bodyweight values 0
+pheno[which(pheno[, "Body_Weight_6m"] < 10), "Body_Weight_6m"] = NA
+pheno[which(pheno[, "Body_Weight_12m"] == 0), "Body_Weight_12m"] = NA
+pheno[which(pheno[, "Body_Weight_18m"] == 0), "Body_Weight_18m"] = NA
+pheno[which(pheno[, "Body_Weight_24m"] == 0), "Body_Weight_24m"] = NA
+
+source("control_plots.R")
+
 
 # Figure out the best covariates for each phenotype
 lmdata <- data.frame(
