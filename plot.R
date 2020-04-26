@@ -13,7 +13,7 @@ getLODs <- function(anovas, phenotype, covariate = "SNP") {
 plotQTL <- function(anovas.male, anovas.female, phenotype = "Longevity", covariate = "SNP") {
   LODS.males <- getLODs(anovas.male, phenotype)
   LODS.females <- getLODs(anovas.female, phenotype)
-  plot(c(0, max(map[, "cumPos"])), c(0, 8), t = 'n', main = phenotype, ylab = "LOD", xlab = "Chromosome", xaxt='n',xaxs='i', yaxs='i')
+  plot(c(0, max(map[, "cumPos"])), c(0, 6), t = 'n', main = phenotype, ylab = "LOD", xlab = "Chromosome", xaxt='n',xaxs='i', yaxs='i')
   for(chr in c(1:19,"X")) {
     onChr <- which(map[, "Chr"] == chr)
     points(map[onChr, "cumPos"], LODS.males[onChr], t = 'l', col = "dodgerblue")
