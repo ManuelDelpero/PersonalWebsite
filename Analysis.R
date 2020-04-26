@@ -136,12 +136,21 @@ anova(lm(BW18 ~ Center + Year, data = males.ctrl))
 anova(lm(BW24 ~ Center, data = males.ctrl))
 anova(lm(Longevity ~ Center + Year, data = males.ctrl))
 
+# Observation: 
+# Male body weight 6-18 months dependants on birth year. However, old age body weight(BW24) in males is independant of birth year
+# Male body weight are affected by Center, However, no seasonal weight effect on male body weight.
+# Male longevity depends on Center and Year
+
 # Minimal models for female control samples
 anova(lm(BW6 ~ Center + Year + Season, data = females.ctrl))
 anova(lm(BW12 ~ Center + Year + Season,, data = females.ctrl))
 anova(lm(BW18 ~ Center + Year + Season, data = females.ctrl))
 anova(lm(BW24 ~ Center + Year + Season, data = females.ctrl))
 anova(lm(Longevity ~ 1, data = females.ctrl))
+
+# Observation: 
+# Female body weight depends on Center, Year, and Season
+# Female longevity seems to not depend per Center, Year, or Season
 
 # We now can start mapping QTLs in control males and females
 library(lme4)
@@ -167,8 +176,55 @@ anovas.female <- apply(genotypes[rownames(females.ctrl), ], 2, function(marker) 
 
 source("plot.R") # Plot functions, depends on anovas.male & anovas.female being available
 # Quick visualization of QTLs in males and females (different model length for males / females and phenotype)
-plotQTL("BW6", 3, 4)
-plotQTL("BW12", 3, 4)
-plotQTL("BW18", 3, 4)
-plotQTL("BW24", 2, 4)
-plotQTL("Longevity", 3, 1)
+op <- par(mfrow=c(1,1))
+plotQTL(anovas.male, anovas.female, "BW6", "SNP")
+plotQTL(anovas.male, anovas.female, "BW12", "SNP")
+plotQTL(anovas.male, anovas.female, "BW18", "SNP")
+plotQTL(anovas.male, anovas.female, "BW24", "SNP")
+plotQTL(anovas.male, anovas.female, "Longevity", "SNP")
+
+males.longevity <- getLODs(anovas.male, "Longevity", "SNP")
+lods.longevity <- which(males.longevity > 3)
+males.longevity <- cbind(map[names(lods.longevity),], LOD = males.longevity[lods.longevity])
+
+# Males: 
+# Chr 14:rs31395602 @ 3.6 LOD
+# Chr 15:rs31929691 @ 5.8 LOD
+# Chr 18:rs31598493 @ 3.4 LOD
+
+mdata <- cbind(males.ctrl,
+      "Chr14" = as.factor(geno[rownames(males.ctrl), "rs31395602"]), 
+      "Chr15" = as.factor(geno[rownames(males.ctrl), "rs31929691"]), 
+      "Chr18" = as.factor(geno[rownames(males.ctrl), "rs31598493"]))
+males.final <- anova(lm(Longevity ~ Center + Year + Chr14 + Chr15 + Chr18, data = mdata))
+
+males.overview <- cbind("Var%" = round(males.final[[2]] / sum(males.final[[2]]) * 100,2), LOD = round(-log10(males.final[[5]]),2))
+rownames(males.overview) <- rownames(males.final)
+
+females.longevity <- getLODs(anovas.female, "Longevity", "SNP")
+lods.longevity <- which(females.longevity > 3)
+females.longevity <- cbind(map[names(lods.longevity),], LOD = females.longevity[lods.longevity])
+
+# Females: 
+# Chr 2:rs27296608 @ 3.2 LOD
+# Chr 3:X3.101003775_C.T @ 4.1 LOD
+# Chr 5:rs29512525 @ 3.0 LOD
+# Chr 9:rs29892095 @ 4.5 LOD
+# Chr 15:rs31016651 @ 3.2 LOD
+# Chr 16:rs50996758 @ 3.2 LOD
+mdata <- cbind(females.ctrl,
+      "Chr2" = as.factor(geno[rownames(females.ctrl), "rs27296608"]), 
+      "Chr3" = as.factor(geno[rownames(females.ctrl), "X3.101003775_C.T"]), 
+      "Chr5" = as.factor(geno[rownames(females.ctrl), "rs29512525"]),
+      "Chr9" = as.factor(geno[rownames(females.ctrl), "rs29892095"]),
+      "Chr15" = as.factor(geno[rownames(females.ctrl), "rs31016651"]),
+      "Chr16" = as.factor(geno[rownames(females.ctrl), "rs50996758"])
+      )
+females.final <- anova(lm(Longevity ~ Chr2 + Chr3 + Chr5 + Chr9 + Chr15 + Chr16, data = mdata))
+
+females.overview <- cbind("Var%" = round(females.final[[2]] / sum(females.final[[2]]) * 100,2), LOD = round(-log10(females.final[[5]]),2))
+rownames(females.overview) <- rownames(females.final)
+
+males.overview
+females.overview
+

@@ -1,15 +1,23 @@
 
+getLODs <- function(anovas, phenotype, covariate = "SNP") {
+  covars <- unlist(unique(lapply(lapply(lapply(anovas, "[", phenotype), function(x) { return(x[[1]]) }), rownames)))
+  cIdx <- which(covars == covariate)
+  x <- lapply(lapply(lapply(anovas, "[", phenotype), 
+                          function(x) { return(as.numeric(x[[1]][,"Pr(>F)"])) }),"[", cIdx)
+  snps <- names(x)
+  lodscores <- -log10(as.numeric(x))
+  names(lodscores) <- snps
+  return(lodscores)
+}
 
-plotQTL <- function(phenotype = "Longevity", mSNP = 3, fSNP = 1){
-  LODS.males <- lapply(lapply(lapply(anovas.male, "[", phenotype), 
-               function(x) { return(as.numeric(x[[1]][,"Pr(>F)"])) }),"[", mSNP)
-  LODS.females <- lapply(lapply(lapply(anovas.female, "[", phenotype), 
-               function(x) { return(as.numeric(x[[1]][,"Pr(>F)"])) }),"[", fSNP)
+plotQTL <- function(anovas.male, anovas.female, phenotype = "Longevity", covariate = "SNP") {
+  LODS.males <- getLODs(anovas.male, phenotype)
+  LODS.females <- getLODs(anovas.female, phenotype)
   plot(c(0, max(map[, "cumPos"])), c(0, 8), t = 'n', main = phenotype, ylab = "LOD", xlab = "Chromosome", xaxt='n',xaxs='i', yaxs='i')
   for(chr in c(1:19,"X")) {
     onChr <- which(map[, "Chr"] == chr)
-    points(map[onChr, "cumPos"], -log10(unlist(LODS.males)[onChr]), t = 'l', col = "dodgerblue")
-    points(map[onChr, "cumPos"], -log10(unlist(LODS.females)[onChr]), t = 'l', col = "darksalmon")
+    points(map[onChr, "cumPos"], LODS.males[onChr], t = 'l', col = "dodgerblue")
+    points(map[onChr, "cumPos"], LODS.females[onChr], t = 'l', col = "darksalmon")
   }
   abline(v = map[which(!diff(as.numeric(map[, "Chr"]) %% 2) == 0), "cumPos"]+10, lty=2)
   mids <- apply(cbind(c(0, map[which(!diff(as.numeric(map[, "Chr"]) %% 2) == 0), "cumPos"]+10), c(map[which(!diff(as.numeric(map[, "Chr"]) %% 2) == 0), "cumPos"]+10, max(as.numeric(map[, "cumPos"])))),1,mean)
